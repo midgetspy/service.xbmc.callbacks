@@ -1,3 +1,6 @@
+v0.5
+- Forked by midgetspy to make it more generic
+
 v0.4
 - Added settings to call script on database update
 

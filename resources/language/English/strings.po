@@ -1,8 +1,8 @@
 # XBMC Media Center language file
 # Addon Name: XBMC Callbacks
 # Addon id: service.xbmc.callbacks
-# Addon version: 0.1
-# Addon Provider: pilluli
+# Addon version: 0.5
+# Addon Provider: midgetspy
 msgid ""
 msgstr ""
 "Project-Id-Version: XBMC Addons\n"
@@ -18,49 +18,9 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgctxt "#32000"
-msgid "Scripts to execute when:"
+msgid "Options for XBMC Callbacks"
 msgstr ""
 
 msgctxt "#32010"
-msgid "XBMC starts"
-msgstr ""
-
-msgctxt "#32011"
-msgid "XBMC quits"
-msgstr ""
-
-msgctxt "#32012"
-msgid "Player starts"
-msgstr ""
-
-msgctxt "#32013"
-msgid "Player stops"
-msgstr ""
-
-msgctxt "#32014"
-msgid "Player pauses"
-msgstr ""
-
-msgctxt "#32015"
-msgid "Player resumes"
-msgstr ""
-
-msgctxt "#32016"
-msgid "Screensaver starts"
-msgstr ""
-
-msgctxt "#32017"
-msgid "Screensaver stops"
-msgstr ""
-
-msgctxt "#32018"
-msgid "XBMC is idle"
-msgstr ""
-
-msgctxt "#32019"
-msgid "Idle time (minutes)"
-msgstr ""
-
-msgctxt "#32020"
-msgid "Database updated"
+msgid "Script to call when an event occurs"
 msgstr ""
