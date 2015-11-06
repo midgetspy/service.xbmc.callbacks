@@ -97,6 +97,9 @@ class PlayerEventReceiver(xbmc.Player):
             mediaType = MediaTypes.MUSIC
         elif self.isPlayingVideo():
             
+            # sometimes the player says it's playing a video but doesn't actually return the correct info for the video that
+            # is playing. If we wait until VideoPlayer.Title is populated it seems to be mostly consistent. Sometimes the
+            # aspect ratio is still wrong though.
             for i in range(10):
                 if xbmc.getInfoLabel('VideoPlayer.Title') != '':
                     break
@@ -140,14 +143,38 @@ class PlayerEventReceiver(xbmc.Player):
     def onPlayBackResumed(self):
         self._sendEvent(EventNames.RESUMED)
 
+class MyMonitor(xbmc.Monitor):
+
+  def onScreensaverActivated(self):
+      call_script({'event': EventNames.SCREENSAVER_ACTIVATED})
+
+  def onScreensaverDeactivated(self):
+      call_script({'event': EventNames.SCREENSAVER_DEACTIVATED})
+
+  def onDatabaseUpdated(self, db):
+      call_script({'event': EventNames.DATABASE_UPDATED})
+
 if __name__ == "__main__":
     log('script version %s started' % __addonversion__)
     
     # make a player that will get called when media-related things happen
     playerEventReceiver = PlayerEventReceiver()
+    monitor = MyMonitor()
     
+    sent_idle = False
+
     # block here so the script stays active until XBMC shuts down
     while not xbmc.abortRequested:
+
+        # watch for the idle time to cross the threshold and send the idle event when it does        
+        if xbmc.getGlobalIdleTime() > 60 * int(__addon__.getSetting("idle_time")):
+            if not sent_idle:
+                call_script({'event': EventNames.IDLE})
+                sent_idle = True
+        else:
+            if sent_idle:
+                call_script({'event': EventNames.NOT_IDLE})
+                sent_idle = False
         xbmc.sleep(1000)
     
     log('script version %s stopped' % __addonversion__)

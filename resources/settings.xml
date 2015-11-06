@@ -2,5 +2,6 @@
 <settings>
     <category label="32000"> 
       <setting label="32010" type="executable" id="callback_script"/>
+      <setting label="32011" type="slider" id="idle_time" default="10" range="1,1,60" option="int" />
     </category>
 </settings>

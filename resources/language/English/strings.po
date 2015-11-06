@@ -24,3 +24,7 @@ msgstr ""
 msgctxt "#32010"
 msgid "Script to call when an event occurs"
 msgstr ""
+
+msgctxt "#32011"
+msgid "Idle time (minutes)"
+msgstr ""
