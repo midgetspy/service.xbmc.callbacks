@@ -32,15 +32,35 @@ __addonversion__ = __addon__.getAddonInfo('version')
 __addonid__      = __addon__.getAddonInfo('id')
 __addonname__    = __addon__.getAddonInfo('name')
 
-def log(txt):
-    message = "{addonName}: {message}".format(addonName=__addonname__, message=txt.encode('ascii', 'ignore'))
-    xbmc.log(msg=message, level=xbmc.LOGNOTICE)
+class Logger(object):
+    @staticmethod
+    def _log(txt, log_level=xbmc.LOGNOTICE, *args, **kwargs):
+        if args or kwargs:
+            txt = txt.format(*args, **kwargs)
+        message = "{addonName}: {message}".format(addonName=__addonname__, message=txt.encode('ascii', 'ignore'))
+        xbmc.log(msg=message, level=log_level)
+    
+    @staticmethod
+    def info(txt, *args, **kwargs):
+        Logger._log(txt, xbmc.LOGINFO, *args, **kwargs)
+    
+    @staticmethod
+    def debug(txt, *args, **kwargs):
+        Logger._log(txt, xbmc.LOGDEBUG, *args, **kwargs)
+    
+    @staticmethod
+    def notice(txt, *args, **kwargs):
+        Logger._log(txt, xbmc.LOGNOTICE, *args, **kwargs)
+        
+    @staticmethod
+    def warning(txt, *args, **kwargs):
+        Logger._log(txt, xbmc.LOGWARNING, *args, **kwargs)
 
 def call_script(*args, **kwargs):
     callbackScript = xbmc.translatePath(__addon__.getSetting("callback_script"))
     
     if not callbackScript:
-        log("No script defined, unable to send callback")
+        Logger.warning("No script defined, unable to send callback")
         return
     
     call_args = [callbackScript]
@@ -50,16 +70,16 @@ def call_script(*args, **kwargs):
         call_args.append('--{key}={value}'.format(key=keyword, value=kwargs[keyword]))
     
     try:
-        log("Calling script: {}".format(call_args))
+        Logger.notice("Calling script: {}", call_args)
         p = subprocess.Popen(call_args, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
         if out:
-            log("Result: {out}".format(out=out))
+            Logger.notice("Result: {}", out)
         if err:
-            log("Error: {err}".format(err=err))
+            Logger.warning("Error: {}", err)
     except Exception as e:
-        log("Error when trying to execute script: {}".format(e))
-        log(traceback.format_exc(e))
+        Logger.warning("Error when trying to execute script: {}", e)
+        Logger.debug(traceback.format_exc(e))
 
 class PlayerEventReceiver(xbmc.Player):
     curMediaType = None
@@ -104,7 +124,7 @@ class PlayerEventReceiver(xbmc.Player):
                 if xbmc.getInfoLabel('VideoPlayer.Title') != '':
                     break
 
-                log("Player is not ready on attempt {}, waiting 10ms and trying again".format(i))
+                Logger.notice("Player is not ready on attempt {}, waiting 10ms and trying again", i)
                 xbmc.sleep(10)
 
             if xbmc.getCondVisibility('VideoPlayer.Content(movies)'):
@@ -117,14 +137,14 @@ class PlayerEventReceiver(xbmc.Player):
                     else:
                         mediaType = MediaTypes.MOVIE
                 except:
-                    log("Exception trying to get the current filename")
+                    Logger.notice("Exception trying to get the current filename")
                     pass
             elif xbmc.getCondVisibility('VideoPlayer.Content(episodes)') and xbmc.getInfoLabel('VideoPlayer.Season') != '' and xbmc.getInfoLabel('VideoPlayer.TVShowTitle') != '':
                 mediaType = MediaTypes.EPISODE
             else:
                 mediaType = MediaTypes.VIDEO
         else:
-            log('Unknown media type currently playing')
+            Logger.notice('Unknown media type currently playing')
             
         return mediaType
 
@@ -155,7 +175,7 @@ class MyMonitor(xbmc.Monitor):
       call_script({'event': EventNames.DATABASE_UPDATED})
 
 if __name__ == "__main__":
-    log('script version %s started' % __addonversion__)
+    Logger.notice('Script version {} started', __addonversion__)
     
     # make a player that will get called when media-related things happen
     playerEventReceiver = PlayerEventReceiver()
@@ -177,4 +197,4 @@ if __name__ == "__main__":
                 sent_idle = False
         xbmc.sleep(1000)
     
-    log('script version %s stopped' % __addonversion__)
+    Logger.notice('Script version {} stopped', __addonversion__)
