@@ -19,8 +19,13 @@
 #    This script is based on script.randomitems & script.wacthlist
 #    Thanks to their original authors
 
+import subprocess
+import traceback
+
 import xbmc
 import xbmcaddon
+
+from resources.lib.common import MediaTypes, EventNames, StereoscopicModes, AspectRatios
 
 __addon__        = xbmcaddon.Addon()
 __addonversion__ = __addon__.getAddonInfo('version')
@@ -28,56 +33,41 @@ __addonid__      = __addon__.getAddonInfo('id')
 __addonname__    = __addon__.getAddonInfo('name')
 
 def log(txt):
-    message = '%s: %s' % (__addonname__, txt.encode('ascii', 'ignore'))
+    message = "{addonName}: {message}".format(addonName=__addonname__, message=txt.encode('ascii', 'ignore'))
     xbmc.log(msg=message, level=xbmc.LOGNOTICE)
 
-class MediaTypes:
-    MOVIE = "MOVIE"
-    AUDIO = "AUDIO"
-    EPISODE = "EPISODE"
-    VIDEO = "VIDEO"
-    TRAILER = "TRAILER"
-    UNKNOWN = "UNKNOWN"
+def call_script(*args, **kwargs):
+    callbackScript = xbmc.translatePath(__addon__.getSetting("callback_script"))
     
-    @staticmethod
-    def isVideo(mediaType):
-        return mediaType in (MediaTypes.MOVIE, MediaTypes.EPISODE, MediaTypes.VIDEO, MediaTypes.TRAILER)
-
-class StereoscopicModes:
-    NONE = "2D"
-    HSBS = "HSBS"
+    if not callbackScript:
+        log("No script defined, unable to send callback")
+        return
     
-    @staticmethod
-    def getMode(xbmcValue):
-        if xbmcValue == '':
-            return StereoscopicModes.NONE
-        elif xbmcValue == 'left_right':
-            return StereoscopicModes.HSBS
+    call_args = [callbackScript]
+    call_args += args
+    
+    for keyword in kwargs.keys():
+        call_args.append('--{key}={value}'.format(key=keyword, value=kwargs[keyword]))
+    
+    try:
+        log("Calling script: {}".format(call_args))
+        p = subprocess.Popen(call_args, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = p.communicate()
+        if out:
+            log("Result: {out}".format(out=out))
+        if err:
+            log("Error: {err}".format(err=err))
+    except Exception as e:
+        log("Error when trying to execute script: {}".format(e))
+        log(traceback.format_exc(e))
 
-class AspectRatios:
-    DEFAULT = 'DEFAULT'
-    # 1.33, 1.37, 1.66, 1.78, 1.85, 2.20, 2.35, 2.40, 2.55, 2.76
-
-class EventNames:
-    PLAYING = "PLAYING"
-    PAUSED = "PAUSED"
-    RESUMED = "RESUMED"
-    STOPPED = "STOPPED"
-
-class Main:
-    def __init__(self):
-        self.playerEventReceiver = PlayerEventReceiver()
-        self._daemon()
-        
-    def _daemon(self):
-        while not xbmc.abortRequested:
-            xbmc.sleep(1000)
-        log('abort requested')
-        
 class PlayerEventReceiver(xbmc.Player):
     curMediaType = None
     
-    def _sendSignal(self, event):
+    def _sendEvent(self, event):
+
+        args = {'event': event}
+       
         mediaType = self._getMediaType()
         
         if event == EventNames.PLAYING:
@@ -85,15 +75,14 @@ class PlayerEventReceiver(xbmc.Player):
         elif event == EventNames.STOPPED:
             mediaType = self.curMediaType
             self.curMediaType = None
-    
-        if not MediaTypes.isVideo(mediaType):
-            log("Non-video media played, not sending any signals: " + mediaType)
-            return
 
-        stereoscopic = self._getStereoscopicMode()
-        aspectRatio = self._getAspectRatio()
+        args['mediaType'] = mediaType
+    
+        if MediaTypes.isVideo(mediaType):
+            args['stereoscopic'] = self._getStereoscopicMode() 
+            args['aspectRatio'] = self._getAspectRatio()
         
-        log("Sending {event}, {mediaType!r} {aspectRatio!r} {stereoscopic!r}".format(event=event, mediaType=mediaType, aspectRatio=aspectRatio, stereoscopic=stereoscopic))
+        call_script(**args)
 
     def _getStereoscopicMode(self):
         return StereoscopicModes.getMode(xbmc.getInfoLabel('VideoPlayer.StereoscopicMode'))
@@ -137,21 +126,28 @@ class PlayerEventReceiver(xbmc.Player):
         return mediaType
 
     def onPlayBackStarted(self):
-        self._sendSignal(EventNames.PLAYING)
+        self._sendEvent(EventNames.PLAYING)
 
     def onPlayBackEnded(self):
         self.onPlayBackStopped()
 
     def onPlayBackStopped(self):
-        self._sendSignal(EventNames.STOPPED)
+        self._sendEvent(EventNames.STOPPED)
 
     def onPlayBackPaused(self):
-        self._sendSignal(EventNames.PAUSED)
+        self._sendEvent(EventNames.PAUSED)
 
     def onPlayBackResumed(self):
-        self._sendSignal(EventNames.RESUMED)
+        self._sendEvent(EventNames.RESUMED)
 
 if __name__ == "__main__":
     log('script version %s started' % __addonversion__)
-    Main()
+    
+    # make a player that will get called when media-related things happen
+    playerEventReceiver = PlayerEventReceiver()
+    
+    # block here so the script stays active until XBMC shuts down
+    while not xbmc.abortRequested:
+        xbmc.sleep(1000)
+    
     log('script version %s stopped' % __addonversion__)
