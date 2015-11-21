@@ -92,6 +92,7 @@ def call_script(*args, **kwargs):
 
 class PlayerEventReceiver(xbmc.Player):
     curMediaType = None
+    didStart3D = False
     
     def _sendEvent(self, event):
 
@@ -108,7 +109,14 @@ class PlayerEventReceiver(xbmc.Player):
         args['mediaType'] = mediaType
     
         if MediaTypes.isVideo(mediaType):
-            args['stereoscopic'] = self._getStereoscopicMode() 
+            stereoscopicMode = self._getStereoscopicMode() 
+            if event == EventNames.PLAYING and stereoscopicMode == StereoscopicModes.HSBS:
+                self.didStart3D = True
+            elif event == EventNames.STOPPED and self.didStart3D:
+                self.didStart3D = False
+                stereoscopicMode = StereoscopicModes.HSBS
+            
+            args['stereoscopic'] = stereoscopicMode
             args['aspectRatio'] = self._getAspectRatio()
         
         call_script(**args)
